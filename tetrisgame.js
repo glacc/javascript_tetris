@@ -1,6 +1,6 @@
 //Javascript Tetris Web Game
 //Created at 2021-10-22 10:54 PM
-//Glacc 2021-10-23
+//Glacc 2021-10-24
 
 var Mode = 0;
 var MenuSelection = 0;
@@ -1133,7 +1133,7 @@ window.onload = function ()
 	window.addEventListener("keydown", function (Event)
 	{
 		Keys.KeyDown(Event.keyCode);
-		console.log(Event.keyCode);
+		//console.log(Event.keyCode);
 	});
 	window.addEventListener("keyup", function (Event)
 	{
