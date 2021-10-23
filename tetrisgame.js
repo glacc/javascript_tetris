@@ -25,7 +25,7 @@ var KeyTimerV = 0;
 var KeyDir = 0;
 
 var StartPosX = 2;
-var StartPosY = 1;
+var StartPosY = 2;
 var PosX = StartPosX;
 var PosY = StartPosY;
 var PreviewX = PosX;
@@ -680,9 +680,9 @@ function DrawScreen()
 		Context.textBaseline = "middle";
 		Context.textAlign = "center";
 		Context.fillText("- Instructions -", 256, 216);
-		Context.fillText("← → - Move", 256, 248);
-		Context.fillText("↓ - Accelerate", 256, 280);
-		Context.fillText("Spacebar - Drop", 256, 296);
+		Context.fillText("← → - Move left / right", 256, 248);
+		Context.fillText("↓ - Soft drop", 256, 280);
+		Context.fillText("Spacebar - Hard drop", 256, 296);
 		Context.fillText("Z X - Rotate CCW / CW", 256, 328);
 		Context.fillText("C - Hold", 256, 344);
 		Context.fillText("P - Pause", 256, 376);
