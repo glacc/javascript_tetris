@@ -1,52 +1,106 @@
-//Javascript Tetris Web Game
+//Javascript Tetris Game
 //Created at 2021-10-22 10:54 PM
-//Glacc 2021-10-24
+//Glacc 2023-05-19
 
-var Mode = 0;
-var MenuSelection = 0;
-var Level = 1;
-var Score = 0;
-var Lines = 0;
-var Paused = 0;
-var GameOver = 0;
+//Changelog
+//
+// 2023-05-19
+//	- Renameing some variables accroding to Tetris glossary
+//	- Combo
+//	- T-spin
+//	- Back-to-back
+//  - Lock delay
+//
+// 2021-10-24
+//	?
+//
 
-var ModeOld = 0;
+var keyMoveLeft = 37;		// Left
+var keyMoveRight = 39;		// Right
+var keyRotateLeft = 90;		// Z
+var keyRotateRight = 88;	// X
+var keySoftDrop = 40;		// Down
+var keyHardDrop = 32;		// Spacebar
+var keyHold = 67;			// C
+var keyPause = 27;			// Escape
+var keyInstruction = 72;	// H
 
-var Timer = 0;
-var StepTime = 1000;
+var das = 7;			// DAS
+var arr = 3;			// ARR
+var softDropDelay = 1.8;
 
-var HorzStartDelay = 7;
-var HorzDelay = 3;
-var VertDelay = 1.8;
+var lockDelay = 30;
+var maxLockDelayRstCnt = 10;
 
-var KeyTimerHS = 0;
-var KeyTimerH = 0;
-var KeyTimerV = 0;
-var KeyDir = 0;
+var keyName = [
+	"", "", "", "", "", "", "", "",																					// 0-7
+	"Backspace", "Tab", "", "", "", "Enter", "", "", "Shift", "Ctrl", "Alt", "Pause/Break", "CapsLock",				// 8-20
+	"", "", "", "", "", "",																							// 21-26
+	"Escape", "", "", "", "",																						// 27-31
+	"Spacebar",	"PgUp", "PgDn", "End", "Home",																		// 32-36
+	"←", "↑", "→", "↓", "", "", "",																					// 37-43
+	"PrtSc", "Insert", "Delete", "",																				// 44-47
+	"0", "1", "2", "3", "4", "5", "6", "7", "8", "9",																// 48-57
+	"", "", "", "", "", "", "",																						// 58-64
+	"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M",												// 65-77
+	"N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z",												// 78-90
+	"Left Windows",	"Right Windows", "Select", "", "",																// 91-95
+	"Num 0", "Num 1", "Num 2", "Num 3", "Num 4", "Num 5", "Num 6", "Num 7", "Num 8", "Num 9",						// 96-105
+	"Num *", "Num +", "Num -", "Num .", "Num /",																	// 106-111
+	"F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12",										// 112-123
+	"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", 								// 124-143
+	"NumLock", "ScrLock", 																							// 144-145
+	"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", 	// 146-172
+	"Mute", "Vol -", "Vol +", "", "", "", "", "", "unnamed", "unnamed", "unnamed", "", "", 							// 173-185
+	";", "=", ",", "-", ".", "/", "`", 																				// 186-192
+	"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",			// 193-218
+	"[", "\\", "]", "'"																								// 219-222
+];
 
-var StartPosX = 2;
-var StartPosY = 2;
-var PosX = StartPosX;
-var PosY = StartPosY;
-var PreviewX = PosX;
-var PreviewY = PosY;
-var CurrentColour = 0;
-var CurrentPiece = 0;
-var HoldCount = 0;
-var HoldPiece = -1;
+var gameStat = 0;
+var menuSelected = 0;
+var level = 1;
+var score = 0;
+var lines = 0;
+var tSpin = false;
+var combo = -1;
+var backToBack = -1;
+var paused = 0;
+var gameOver = 0;
 
-var KeyUp = 1;
+var modeOld = 0;
 
-var GameCanvas;
-var Interval;
+var timer = 0;
+var stepTime = 1000;
+var lockTmr = 0;
 
-var BlockSpacing = 2;
-var BlockWidth = (256 + BlockSpacing) / 10.0;
-var BlockHeight = (512 + BlockSpacing) / 20.0;
-var BlockWidthInternal = BlockWidth - BlockSpacing;
-var BlockHeightInternal = BlockHeight - BlockSpacing;
+var keyTimerHS = 0;
+var keyTimerH = 0;
+var keyTimerV = 0;
+var keyDir = 0;
 
-var BlockTable = [
+var startPosX = 2;
+var startPosY = 2;
+var posX = startPosX;
+var posY = startPosY;
+var previewX = posX;
+var previewY = posY;
+var curColour = 0;
+var curTetrimino = 0;
+var rstCnt = 0;
+var holdCount = 0;
+var holdTetrimino = -1;
+
+var playfieldMsg = ["", "", "", ""];
+var playfieldMsgDuration = 40;
+var playfieldMsgTmr = playfieldMsgDuration;
+
+var keyUp = 1;
+
+var gameCanvas;
+var interval;
+
+var minoTable = [
 	[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 	[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 	[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -74,9 +128,9 @@ var BlockTable = [
 	[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 ];
 
-var PieceDataSize = 5;
+var tetriminoDataSize = 5;
 
-var PieceData = [
+var tetriminoData = [
 	//J
 	[
 		[0, 0, 0, 0, 0],
@@ -261,9 +315,9 @@ var PieceData = [
 	],
 ];
 
-var KickTestIDs = [0, 0, 0, 0, 0, 1, 2];
+var kickTestIDs = [0, 0, 0, 0, 0, 1, 2];
 
-var KickTestVectors = [
+var kickTestVectors = [
 	[
 		[[ 0,  0], [ 0,  0], [ 0,  0], [ 0,  0], [ 0,  0]], 
 		[[ 0,  0], [ 1,  0], [ 1, -1], [ 0,  2], [ 1,  2]], 
@@ -282,35 +336,302 @@ var KickTestVectors = [
 	], 
 ]
 
-var ColorTable = ["#0000FF", "#FF9F00", "#00CF00", "#CF00CF", "#CF0000", "#009FFF", "#FFFF00"];
+var colorTable = ["#0000FF", "#FF9F00", "#00CF00", "#CF00CF", "#CF0000", "#009FFF", "#FFFF00"];
 
-//Randomizer
+// Draw
 
-var PieceQueueTop = 4;
-var PieceQueue = [];
+var minoSpacing = 2;
+var minoWidth = (256 + minoSpacing) / 10.0;
+var minoHeight = (512 + minoSpacing) / 20.0;
+var minoWidthInternal = minoWidth - minoSpacing;
+var minoHeightInternal = minoHeight - minoSpacing;
 
-var CurrentPack = 0;
-var CurPackCount = 0;
-var RandomPacks = [[], [], []];
-
-function NewPack(PackID)
+function DrawScreen()
 {
-	var MaxRetryCount = 10;
+	var context = gameCanvas.getContext("2d");
+	context.fillStyle = "#000000";
+	context.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
+
+	// Border
+	context.strokeStyle = "#00000000";
+	context.fillStyle = "#FFFFFFFF";
+//	context.fillStyle = "#FFFFFF7F";
+	context.fillRect(60, 60 + 64, 263, 2);
+//	context.fillStyle = "#FFFFFFFF";
+	context.fillRect(60, 60 + 64, 263, 2);
+	context.fillRect(60, 60 + 64, 2, 519);
+	context.fillRect(322, 60 + 64, 2, 519);
+	context.fillRect(60, 578 + 64, 263, 2);
+
+	// Playfield
+	var y = 1;
+	while (y < 25)
+	{
+		var x = 0;
+		while (x < 10)
+		{
+			if (minoTable[y][x])
+			{
+				context.fillStyle = colorTable[minoTable[y][x] - 1];
+				context.fillRect(64 + x * minoWidth, 128 + (y - 5) * minoHeight, minoWidthInternal, minoHeightInternal);
+			}
+
+			x ++ ;
+		}
+		
+		y ++ ;
+	}
+
+	// Current
+	if (!gameOver)
+	{
+		y = 0;
+		while (y < tetriminoDataSize)
+		{
+			var x = 0;
+			while (x < tetriminoDataSize)
+			{
+				if (tetriminoData[curTetrimino][y][x])
+				{
+					context.fillStyle = colorTable[curColour];
+					context.fillRect(64 + (posX + x) * minoWidth, 128 + (posY + y - 5) * minoHeight, minoWidthInternal, minoHeightInternal);
+				}
+
+				x ++ ;
+			}
+
+			y ++ ;
+		}
+	}
+
+	// Preview
+	if (posY != previewY)
+	{
+		y = 0;
+		while (y < tetriminoDataSize)
+		{
+			var x = 0;
+			while (x < tetriminoDataSize)
+			{
+				if (tetriminoData[curTetrimino][y][x])
+				{
+					context.fillStyle = colorTable[curColour] + "3F";
+					context.fillRect(64 + (previewX + x) * minoWidth, 128 + (previewY + y - 5) * minoHeight, minoWidthInternal, minoHeightInternal);
+				}
+
+				x ++ ;
+			}
+
+			y ++ ;
+		}
+	}
+
+	// Hold
+	if (holdTetrimino >= 0)
+	{
+		var Hold = holdTetrimino << 2;
+
+		y = 0;
+		while (y < tetriminoDataSize)
+		{
+			var x = 0;
+			while (x < tetriminoDataSize)
+			{
+				if (tetriminoData[Hold][y][x])
+				{
+					context.fillStyle = colorTable[Hold >> 2];
+					context.fillRect(384 + (x - 2) * minoWidth, 128 + y * minoHeight, minoWidthInternal, minoHeightInternal);
+				}
+
+				x ++ ;
+			}
+
+			y ++ ;
+		}
+	}
+
+	// Next
+	var i = 0;
+	while (i <= tetriminoQueueTop)
+	{
+		var QueuePiece = tetriminoQueue[i] << 2;
+
+		y = 0;
+		while (y < tetriminoDataSize)
+		{
+			var x = 0;
+			while (x < tetriminoDataSize)
+			{
+				if (tetriminoData[QueuePiece][y][x])
+				{
+					context.fillStyle = colorTable[QueuePiece >> 2];
+					context.fillRect(384 + (x - 2) * minoWidth, 160 + (y + (i + 1) * 3) * minoHeight, minoWidthInternal, minoHeightInternal);
+				}
+
+				x ++ ;
+			}
+
+			y ++ ;
+		}
+
+		i ++ ;
+	}
+
+	// Text
+	context.fillStyle = "#FFFFFF";
+	context.font = "16px Gadugi";
+	context.textBaseline = "top";
+	context.textAlign = "left";
+	context.fillText("HOLD:", 352, 128);
+	context.fillText("NEXT:", 352, 160 + minoHeight * 3);
+
+	// Info
+	if (playfieldMsgTmr < playfieldMsgDuration)
+	{
+		var alpha = Math.min(((playfieldMsgDuration - playfieldMsgTmr) / 10), 1);
+
+		context.fillStyle = "rgba(255, 255, 255, " + alpha + ")";
+		context.font = "20px Gadugi";
+		context.textBaseline = "middle";
+		context.textAlign = "center";
+
+		var i = 0;
+		while (i < playfieldMsg.length)
+		{
+			context.fillText(playfieldMsg[i], 188, 316 + i * 30);
+			i ++ ;
+		}
+
+		playfieldMsgTmr ++ ;
+	}
+
+	// Pause
+	if (paused)
+	{
+		context.fillStyle = "#000000";
+		context.fillRect(128, 273, 256, 96);
+		context.fillStyle = "#FFFFFF";
+		context.fillRect(128, 273, 256, 2);
+		context.fillRect(128, 273, 2, 96);
+		context.fillRect(382, 273, 2, 96);
+		context.fillRect(128, 367, 256, 2);
+		
+		context.font = "24px Gadugi";
+		context.textBaseline = "middle";
+		context.textAlign = "center";
+		context.fillText("Paused", 256, 316);
+		
+		context.font = "10px Gadugi";
+		context.fillText("Press " + keyName[keyPause] + " to continue.", 256, 340);
+	}
+
+	switch (gameStat)
+	{
+		case 0:			// Level select
+			context.fillStyle = "#000000";
+			context.fillRect(128, 257, 256, 128);
+			context.fillStyle = "#FFFFFF";
+			context.fillRect(128, 257, 256, 2);
+			context.fillRect(128, 257, 2, 128);
+			context.fillRect(382, 257, 2, 128);
+			context.fillRect(128, 383, 256, 2);
+
+			context.font = "24px Gadugi";
+			context.textBaseline = "middle";
+			context.textAlign = "center";
+			context.fillText("Level: " + level, 256, 296);
+
+			context.font = "14px Gadugi";
+			context.fillText("Press ←/→ to select level.", 256, 328);
+
+			context.font = "10px Gadugi";
+			context.fillText("Press Spacebar to start.", 256, 352);
+			break;
+		case 2:			// Controls
+			context.fillStyle = "#000000";
+			context.fillRect(128, 192, 256, 256);
+			context.fillStyle = "#FFFFFF";
+			context.fillRect(128, 192, 256, 2);
+			context.fillRect(128, 192, 2, 256);
+			context.fillRect(382, 192, 2, 256);
+			context.fillRect(128, 448, 256, 2);
+
+			context.font = "18px Gadugi";
+			context.textBaseline = "middle";
+			context.textAlign = "center";
+			context.fillText("- Controls -", 256, 224);
+
+			var yOfs = 256;
+			context.font = "14px Gadugi";
+			context.fillText(keyName[keyMoveLeft] + "/" + keyName[keyMoveRight] + " - Move left/right", 256, yOfs);
+			context.fillText(keyName[keyRotateLeft] + "/" + keyName[keyRotateRight] + " - Rotate left/right", 256, yOfs + 16);
+
+			context.fillText(keyName[keySoftDrop] + " - Soft drop", 256, yOfs + 16 * 3);
+			context.fillText(keyName[keyHardDrop] + " - Hard drop", 256, yOfs + 16 * 4);
+
+			context.fillText(keyName[keyHold] + " - Hold", 256, yOfs + 16 * 6);
+
+			context.fillText(keyName[keyPause] + " - Pause", 256, yOfs + 16 * 8);
+
+			context.font = "10px Gadugi";
+			context.fillText("Press " + keyName[keyInstruction] + " to close.", 256, yOfs + 16 * 10);
+			break;
+	}
+
+	//Game over
+	if (gameOver)
+	{
+		context.fillStyle = "#000000";
+		context.fillRect(128, 273, 256, 96);
+		context.fillStyle = "#FFFFFF";
+		context.fillRect(128, 273, 256, 2);
+		context.fillRect(128, 273, 2, 96);
+		context.fillRect(382, 273, 2, 96);
+		context.fillRect(128, 367, 256, 2);
+
+		context.font = "24px Gadugi";
+		context.textBaseline = "middle";
+		context.textAlign = "center";
+		context.fillText("Game Over", 256, 316);
+
+		context.font = "10px Gadugi";
+		context.fillText("Press Spacebar to continue.", 256, 340);
+	}
+
+	context.fillStyle = "#FFFFFF";
+	context.font = "16px Gadugi";
+	context.textBaseline = "middle";
+	context.textAlign = "center";
+	context.fillText(keyName[keyInstruction] + " - Controls", 256, 672);
+}
+
+// Randomizer
+
+var tetriminoQueueTop = 4;
+var tetriminoQueue = [];
+
+var curBag = 0;
+var curBagCount = 0;
+var tetriminoBag = [[], [], []];
+
+function NewBag(bagID)
+{
+	var maxRetryCount = 10;
 
 	var i = 0;
 	while (i < 7)
 	{
-		var RandID = Math.floor(Math.random() * 7);
+		var randID = Math.floor(Math.random() * 7);
 
-		var RetryCount = 0;
-		while (RetryCount < MaxRetryCount)
+		var retryCount = 0;
+		while (retryCount < maxRetryCount)
 		{
 			var j = 0;
 			while (j < i)
 			{
-				if (RandID == RandomPacks[PackID][j])
+				if (randID == tetriminoBag[bagID][j])
 				{
-					RandID = Math.floor(Math.random() * 7);
+					randID = Math.floor(Math.random() * 7);
 					break;
 				}	
 
@@ -320,18 +641,18 @@ function NewPack(PackID)
 			if (j == i)
 				break;
 
-			RetryCount ++ ;
+			retryCount ++ ;
 		}
-		if (RetryCount == MaxRetryCount)
+		if (retryCount == maxRetryCount)
 		{
-			RandID = 0;
+			randID = 0;
 
-			while (RandID < 6)
+			while (randID < 6)
 			{
 				var j = 0;
 				while (j < i)
 				{
-					if (RandID == RandomPacks[PackID][j])
+					if (randID == tetriminoBag[bagID][j])
 						break;
 
 					j ++ ;
@@ -340,74 +661,73 @@ function NewPack(PackID)
 				if (j == i)
 					break;
 
-				RandID ++ ;
+				randID ++ ;
 			}
 		}
 		
-		RandomPacks[PackID][i++] = RandID;
+		tetriminoBag[bagID][i++] = randID;
 	}
 }
 
-function RandPiece()
+function RandTetrimino()
 {
-	var CurPiece = RandomPacks[CurrentPack][CurPackCount++];
+	var curTetrimino = tetriminoBag[curBag][curBagCount++];
 
-	if (CurPackCount >= 7)
+	if (curBagCount >= 7)
 	{
-		NewPack(CurrentPack++);
-		CurPackCount = 0;
+		NewBag(curBag++);
+		curBagCount = 0;
 
-		if (CurrentPack >= 3)
-			CurrentPack = 0;
+		if (curBag >= 3)
+			curBag = 0;
 	}
 
-	return CurPiece;
+	return curTetrimino;
 }
 
 function InitRandomizer()
 {
-	CurrentPack = 0;
-	CurPackCount = 0;
+	curBag = 0;
+	curBagCount = 0;
 
 	var i = 0;
 	while (i < 3)
-		NewPack(i++);
+		NewBag(i++);
 
 	i = 0;
 	while (i < 5)
-		PieceQueue[i++] = RandPiece();
+		tetriminoQueue[i++] = RandTetrimino();
 }
 
 function FetchQueue()
 {
-	//CurrentPiece = PieceIDs[PieceQueue[0][0]];
-	CurrentPiece = PieceQueue[0] << 2;
-	CurrentColour = CurrentPiece >> 2;
+	curTetrimino = tetriminoQueue[0] << 2;
+	curColour = curTetrimino >> 2;
 
 	var i = 0;
-	while (i < PieceQueueTop)
+	while (i < tetriminoQueueTop)
 	{
-		PieceQueue[i] = PieceQueue[i + 1];
+		tetriminoQueue[i] = tetriminoQueue[i + 1];
 		i ++ ;
 	}
 
-	PieceQueue[PieceQueueTop] = RandPiece();
+	tetriminoQueue[tetriminoQueueTop] = RandTetrimino();
 }
 
-//Game logic
+// Logic
 
 class Keys
 {
-	static KeyTable = [];
-	static KeyPressTable = [];
+	static keyTable = [];
+	static keyPressTable = [];
 
 	static Init()
 	{
 		var i = 0;
 		while (i < 256)
 		{
-			this.KeyTable[i] = 0;
-			this.KeyPressTable[i] = 0;
+			this.keyTable[i] = 0;
+			this.keyPressTable[i] = 0;
 			
 			i ++ ;
 		}
@@ -415,46 +735,46 @@ class Keys
 		this.KeyPress = 0;
 	}
 
-	static KeyDown(KeyNum)
+	static KeyDown(keyNum)
 	{
-		this.KeyTable[KeyNum] = 1;
+		this.keyTable[keyNum] = 1;
 	}
 
-	static KeyUp(KeyNum)
+	static KeyUp(keyNum)
 	{
 		
-		this.KeyTable[KeyNum] = 0;
+		this.keyTable[keyNum] = 0;
 	}
 
-	static KeyPressed(GroupNum)
+	static KeyPressed(groupNum)
 	{
-		this.KeyPressTable[GroupNum] = 1;
+		this.keyPressTable[groupNum] = 1;
 	}
 
-	static KeyReleased(GroupNum)
+	static KeyReleased(groupNum)
 	{
-		this.KeyPressTable[GroupNum] = 0;
+		this.keyPressTable[groupNum] = 0;
 	}
 
-	static IsPressed(GroupNum)
+	static IsPressed(groupNum)
 	{
-		return this.KeyPressTable[GroupNum];
+		return this.keyPressTable[groupNum];
 	}
 
-	static IsDown(KeyNum)
+	static IsDown(keyNum)
 	{
-		return this.KeyTable[KeyNum];
+		return this.keyTable[keyNum];
 	}
 }
 
-function ClearTable()
+function ClearPlayfield()
 {
 	var y = 0;
 	while (y < 25)
 	{
 		var x = 0;
 		while (x < 10)
-			BlockTable[y][x++] = 0;
+			minoTable[y][x++] = 0;
 
 		y ++ ;
 	}
@@ -462,277 +782,62 @@ function ClearTable()
 
 function InitGame()
 {
-	Mode = 0;
-	MenuSelection = 0;
-	Level = 1;
-	Score = 0;
-	Lines = 0;
-	Paused = 0;
-	GameOver = 0;
+	gameStat = 0;
+	menuSelected = 0;
+	level = 1;
+	score = 0;
+	lines = 0;
+	tSpin = false;
+	combo = -1;
+	backToBack = -1;
+	paused = 0;
+	gameOver = 0;
 
-	StepTime = 1000;
+	stepTime = 1000;
+	lockTmr = 0;
+	rstCnt = 0;
 
-	KeyUp = 0;
+	keyUp = 0;
 
 	InitRandomizer();
 	FetchQueue();
 
-	ClearTable();
+	ClearPlayfield();
 }
 
-function ToggleInstructionScreen()
+function ToggleControlScreen()
 {
-	if (Mode != 2)
+	if (gameStat != 2)
 	{
-		ModeOld = Mode;
-		Mode = 2;
+		modeOld = gameStat;
+		gameStat = 2;
 	}
 	else
-		Mode = ModeOld;
+		gameStat = modeOld;
 }
 
-function DrawScreen()
+function RemoveLine(line)
 {
-	var Context = GameCanvas.getContext("2d");
-	Context.fillStyle = "#000000";
-	Context.fillRect(0, 0, GameCanvas.width, GameCanvas.height);
-
-	//Border
-	Context.strokeStyle = "#00000000";
-	Context.fillStyle = "#FFFFFF7F";
-	Context.fillRect(60, 60 + 64, 263, 2);
-	Context.fillStyle = "#FFFFFFFF";
-	Context.fillRect(60, 60 + 64, 2, 519);
-	Context.fillRect(322, 60 + 64, 2, 519);
-	Context.fillRect(60, 578 + 64, 263, 2);
-
-	//Blocks
-	var y = 1;
-	while (y < 25)
+	while (line)
 	{
-		var x = 0;
-		while (x < 10)
-		{
-			if (BlockTable[y][x])
-			{
-				Context.fillStyle = ColorTable[BlockTable[y][x] - 1];
-				Context.fillRect(64 + x * BlockWidth, 128 + (y - 5) * BlockHeight, BlockWidthInternal, BlockHeightInternal);
-			}
-
-			x ++ ;
-		}
-		
-		y ++ ;
+		minoTable[line] = minoTable[line - 1];
+		line -- ;
 	}
 
-	//Current
-	if (!GameOver)
-	{
-		y = 0;
-		while (y < PieceDataSize)
-		{
-			var x = 0;
-			while (x < PieceDataSize)
-			{
-				if (PieceData[CurrentPiece][y][x])
-				{
-					Context.fillStyle = ColorTable[CurrentColour];
-					Context.fillRect(64 + (PosX + x) * BlockWidth, 128 + (PosY + y - 5) * BlockHeight, BlockWidthInternal, BlockHeightInternal);
-				}
-
-				x ++ ;
-			}
-
-			y ++ ;
-		}
-	}
-
-	//Preview
-	if (PosY != PreviewY)
-	{
-		y = 0;
-		while (y < PieceDataSize)
-		{
-			var x = 0;
-			while (x < PieceDataSize)
-			{
-				if (PieceData[CurrentPiece][y][x])
-				{
-					Context.fillStyle = ColorTable[CurrentColour] + "3F";
-					Context.fillRect(64 + (PreviewX + x) * BlockWidth, 128 + (PreviewY + y - 5) * BlockHeight, BlockWidthInternal, BlockHeightInternal);
-				}
-
-				x ++ ;
-			}
-
-			y ++ ;
-		}
-	}
-
-	//Hold
-	if (HoldPiece >= 0)
-	{
-		var Hold = HoldPiece << 2;
-
-		y = 0;
-		while (y < PieceDataSize)
-		{
-			var x = 0;
-			while (x < PieceDataSize)
-			{
-				if (PieceData[Hold][y][x])
-				{
-					Context.fillStyle = ColorTable[Hold >> 2];
-					Context.fillRect(384 + (x - 2) * BlockWidth, 128 + y * BlockHeight, BlockWidthInternal, BlockHeightInternal);
-				}
-
-				x ++ ;
-			}
-
-			y ++ ;
-		}
-	}
-
-	//Queue
-	var i = 0;
-	while (i <= PieceQueueTop)
-	{
-		var QueuePiece = PieceQueue[i] << 2;
-
-		y = 0;
-		while (y < PieceDataSize)
-		{
-			var x = 0;
-			while (x < PieceDataSize)
-			{
-				if (PieceData[QueuePiece][y][x])
-				{
-					Context.fillStyle = ColorTable[QueuePiece >> 2];
-					Context.fillRect(384 + (x - 2) * BlockWidth, 160 + (y + (i + 1) * 3) * BlockHeight, BlockWidthInternal, BlockHeightInternal);
-				}
-
-				x ++ ;
-			}
-
-			y ++ ;
-		}
-
-		i ++ ;
-	}
-
-	//Text
-	Context.fillStyle = "#FFFFFF";
-	Context.font = "16px Gadugi";
-	Context.textBaseline = "top";
-	Context.textAlign = "left";
-	Context.fillText("HOLD:", 352, 128);
-	Context.fillText("NEXT:", 352, 160 + BlockHeight * 3);
-
-	//Paused
-	if (Paused)
-	{
-		Context.fillStyle = "#000000";
-		Context.fillRect(128, 273, 256, 96);
-		Context.fillStyle = "#FFFFFF";
-		Context.fillRect(128, 273, 256, 2);
-		Context.fillRect(128, 273, 2, 96);
-		Context.fillRect(382, 273, 2, 96);
-		Context.fillRect(128, 367, 256, 2);
-		
-		Context.textBaseline = "middle";
-		Context.textAlign = "center";
-		Context.fillText("PAUSED", 256, 320);
-	}
-
-	//Level selection
-	if (Mode == 0)
-	{
-		Context.fillStyle = "#000000";
-		Context.fillRect(128, 257, 256, 128);
-		Context.fillStyle = "#FFFFFF";
-		Context.fillRect(128, 257, 256, 2);
-		Context.fillRect(128, 257, 2, 128);
-		Context.fillRect(382, 257, 2, 128);
-		Context.fillRect(128, 383, 256, 2);
-
-		Context.font = "24px Gadugi";
-		Context.textBaseline = "middle";
-		Context.textAlign = "center";
-		Context.fillText("Level: " + Level, 256, 296);
-
-		Context.font = "16px Gadugi";
-		Context.fillText("Press ← → to select level.", 256, 328);
-		Context.fillText("Press spacebar to start.", 256, 352);
-	}
-
-	//Instructions
-	if (Mode == 2)
-	{
-		Context.fillStyle = "#000000";
-		Context.fillRect(128, 192, 256, 256);
-		Context.fillStyle = "#FFFFFF";
-		Context.fillRect(128, 192, 256, 2);
-		Context.fillRect(128, 192, 2, 256);
-		Context.fillRect(382, 192, 2, 256);
-		Context.fillRect(128, 448, 256, 2);
-
-		Context.font = "16px Gadugi";
-		Context.textBaseline = "middle";
-		Context.textAlign = "center";
-		Context.fillText("- Instructions -", 256, 216);
-		Context.fillText("← → - Move left / right", 256, 248);
-		Context.fillText("↓ - Soft drop", 256, 280);
-		Context.fillText("Spacebar - Hard drop", 256, 296);
-		Context.fillText("Z X - Rotate CCW / CW", 256, 328);
-		Context.fillText("C - Hold", 256, 344);
-		Context.fillText("P - Pause", 256, 376);
-		Context.font = "10px Gadugi";
-		Context.fillText("Press H to close.", 256, 408);
-	}
-
-	//Game over
-	if (GameOver)
-	{
-		Context.fillStyle = "#000000";
-		Context.fillRect(128, 273, 256, 96);
-		Context.fillStyle = "#FFFFFF";
-		Context.fillRect(128, 273, 256, 2);
-		Context.fillRect(128, 273, 2, 96);
-		Context.fillRect(382, 273, 2, 96);
-		Context.fillRect(128, 367, 256, 2);
-
-		Context.font = "32px Gadugi";
-		Context.textBaseline = "middle";
-		Context.textAlign = "center";
-		Context.fillText("GAME OVER", 256, 320);
-	}
-
-	Context.font = "16px Gadugi";
-	Context.textBaseline = "middle";
-	Context.textAlign = "center";
-	Context.fillText("H - Instructions", 256, 672);
+	minoTable[0] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 }
 
-function RemoveLine(Line)
+function LineClearDetect()
 {
-	while (Line)
-	{
-		BlockTable[Line] = BlockTable[Line - 1];
-		Line -- ;
-	}
+	var count = 0;
 
-	BlockTable[0] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-}
-
-function LineDetect()
-{
 	var y = 24;
 	while (y >= 0)
 	{
 		var x = 0;
 		while (x < 10)
 		{
-			if (!BlockTable[y][x])
+			if (!minoTable[y][x])
 				break;
 
 			x ++ ;
@@ -740,29 +845,61 @@ function LineDetect()
 		
 		if (x == 10)
 		{
-			Lines ++ ;
+			count ++ ;
+			lines ++ ;
 			RemoveLine(y);
 		}
 		else
 			y -- ;
 	}
+
+	var lineClearStr = ["Single", "Double", "Triple", "Quad"];
+	if (count > 0)
+	{
+		var ofs = 0;
+		playfieldMsg = ["", "", "", ""];
+
+		if (tSpin)
+			playfieldMsg[ofs] += "T-Spin "
+
+		playfieldMsg[ofs++] += lineClearStr[count - 1];
+
+		if ((tSpin && count >= 2) || count == 4)
+			backToBack ++ ;
+		else
+			backToBack = -1;
+
+		if (backToBack > 0)
+			playfieldMsg[ofs++] += "Back-to-back x" + backToBack;
+		
+
+		combo ++ ;
+		if (combo > 0)
+			playfieldMsg[ofs++] += "Combo " + combo;
+
+		playfieldMsgTmr = 0;
+	}
+	else
+	{
+		combo = -1;
+	}
 }
 
-function CollisionDetect(pX, pY, PieceID)
+function CollisionDetect(pX, pY, tetriminoID)
 {
 	var y = 0;
-	while (y < PieceDataSize)
+	while (y < tetriminoDataSize)
 	{
 		var x = 0;
-		while (x < PieceDataSize)
+		while (x < tetriminoDataSize)
 		{
-			if (PieceData[PieceID][y][x])
+			if (tetriminoData[tetriminoID][y][x])
 			{
 				if ((pX + x < 0) || (pX + x >= 10) || (pY + y >= 25))
 					return 1;
 
 				if (pY + y >= 0) 
-					if (BlockTable[pY + y][pX + x])
+					if (minoTable[pY + y][pX + x])
 						return 1;
 			}
 				
@@ -775,24 +912,27 @@ function CollisionDetect(pX, pY, PieceID)
 	return 0;
 }
 
-function ResetPiece()
+function ResetPosition()
 {
-	PosX = StartPosX;
-	PosY = StartPosY;
-	CurrentColour = CurrentPiece >> 2;
+	posX = startPosX;
+	posY = startPosY;
+	curColour = curTetrimino >> 2;
+	tSpin = false;
+	lockTmr = 0;
+	rstCnt = 0;
 	UpdatePreview();
 }
 
-function PutPiece(pX, pY, PieceID)
+function PutPiece(pX, pY, tetriminoID)
 {
 	var y = 0;
-	while (y < PieceDataSize)
+	while (y < tetriminoDataSize)
 	{
 		var x = 0;
-		while (x < PieceDataSize)
+		while (x < tetriminoDataSize)
 		{
-			if (PieceData[PieceID][y][x])
-				BlockTable[pY + y][pX + x] = CurrentColour + 1;
+			if (tetriminoData[tetriminoID][y][x])
+				minoTable[pY + y][pX + x] = curColour + 1;
 
 			x ++ ;
 		}
@@ -800,77 +940,81 @@ function PutPiece(pX, pY, PieceID)
 		y ++ ;
 	}
 
-	HoldCount = 0;
+	holdCount = 0;
 
-	LineDetect();
+	LineClearDetect();
 	FetchQueue();
-	ResetPiece();
 
-	if (CollisionDetect(PosX, PosY, CurrentPiece))
-		GameOver = 1;
+	ResetPosition();
+	if (CollisionDetect(posX, posY, curTetrimino))
+		gameOver = 1;
 }
 
-function RotatePiece(Dir)
+function TSpinDetect(pX, pY, tetriminoID)
 {
-	var NewPiece = CurrentPiece;
+	if ((tetriminoID >> 2) != 3)
+		return;
 
-	/*
-	if (Dir)
+	var count = 0;
+	if (minoTable[pY + 1][pX + 1]) count ++ ;
+	if (minoTable[pY + 1][pX + 3]) count ++ ;
+	if (minoTable[pY + 3][pX + 1]) count ++ ;
+	if (minoTable[pY + 3][pX + 3]) count ++ ;
+
+	if (count >= 3)
+		tSpin = true;
+}
+
+function Rotated()
+{
+	if (rstCnt < maxLockDelayRstCnt && CollisionDetect(posX, posY + 1, curTetrimino))
 	{
-		NewPiece ++ ;
-		if (NewPiece == 2 || NewPiece == 4)
-			NewPiece -= 2;
-		else if (NewPiece == 8 || NewPiece == 12 || NewPiece == 16 || NewPiece == 21)
-			NewPiece -= 4;
+		lockTmr = 0;
+		rstCnt ++ ;
+	}
+
+	TSpinDetect(posX, posY, curTetrimino);
+}
+
+function RotatePiece(dir)
+{
+	var newTetrimino = curTetrimino;
+
+	if (dir)
+	{
+		newTetrimino ++ ;
+		if (!(newTetrimino % 4))
+			newTetrimino -= 4;
 	}
 	else
 	{
-		NewPiece -- ;
-		if (NewPiece == -1 || NewPiece == 1)
-			NewPiece += 2;
-		else if (NewPiece == 3 || NewPiece == 7 || NewPiece == 11 || NewPiece == 16)
-			NewPiece += 4;
-	}
-	*/
-	if (Dir)
-	{
-		NewPiece ++ ;
-		if (!(NewPiece % 4))
-			NewPiece -= 4;
-	}
-	else
-	{
-		NewPiece -- ;
-		if (!((NewPiece + 1) % 4))
-			NewPiece += 4;
+		newTetrimino -- ;
+		if (!((newTetrimino + 1) % 4))
+			newTetrimino += 4;
 	}
 
-	/*
-	if (!CollisionDetect(PosX, PosY, NewPiece))
-		CurrentPiece = NewPiece;
-	*/
-
-	if (CollisionDetect(PosX, PosY, NewPiece))
+	if (CollisionDetect(posX, posY, newTetrimino))
 	{
-		var TestID = KickTestIDs[NewPiece >> 2];
-		var TestDirOld = CurrentPiece % 4;
-		var TestDirNew = NewPiece % 4;
-		var TestLen = KickTestVectors[TestID][TestDirNew].length;
+		var testID = kickTestIDs[newTetrimino >> 2];
+		var testDirOld = curTetrimino % 4;
+		var testDirNew = newTetrimino % 4;
+		var testLen = kickTestVectors[testID][testDirNew].length;
 
-		var OffsetX = 0;
-		var OffsetY = 0;
+		var ofsX = 0;
+		var ofsY = 0;
 
 		var i = 0;
-		while (i < TestLen)
+		while (i < testLen)
 		{
-			OffsetX = KickTestVectors[TestID][TestDirOld][i][0] - KickTestVectors[TestID][TestDirNew][i][0];
-			OffsetY = KickTestVectors[TestID][TestDirNew][i][1] - KickTestVectors[TestID][TestDirOld][i][1];
+			ofsX = kickTestVectors[testID][testDirOld][i][0] - kickTestVectors[testID][testDirNew][i][0];
+			ofsY = kickTestVectors[testID][testDirNew][i][1] - kickTestVectors[testID][testDirOld][i][1];
 
-			if (!CollisionDetect(PosX + OffsetX, PosY + OffsetY, NewPiece))
+			if (!CollisionDetect(posX + ofsX, posY + ofsY, newTetrimino))
 			{
-				PosX += OffsetX;
-				PosY += OffsetY;
-				CurrentPiece = NewPiece;
+				posX += ofsX;
+				posY += ofsY;
+				curTetrimino = newTetrimino;
+				Rotated();
 
 				break;
 			}
@@ -879,103 +1023,108 @@ function RotatePiece(Dir)
 		}
 	}
 	else
-		CurrentPiece = NewPiece;
+	{
+		curTetrimino = newTetrimino;
+		Rotated();
+	}
 }
 
 function UpdatePreview()
 {
-	PreviewX = PosX;
-	PreviewY = PosY;
-	while (!CollisionDetect(PreviewX, PreviewY + 1, CurrentPiece))
-		PreviewY ++ ;
+	previewX = posX;
+	previewY = posY;
+	while (!CollisionDetect(previewX, previewY + 1, curTetrimino))
+		previewY ++ ;
 }
+
+// Update
 
 function GameUpdate()
 {
-	if (Keys.IsDown(80))
+	if (Keys.IsDown(keyPause))
 	{
 		if (!Keys.IsPressed(2))
-			Paused = !Paused;
+			paused = !paused;
 
 		Keys.KeyPressed(2);
 	}
 	else
 		Keys.KeyReleased(2);
 
-	if (!(Paused || GameOver))
+	if (!(paused || gameOver))
 	{
-		var Lvl = Lines / 10 + 1;
-		Level = Lvl > Level ? Lvl : Level;
-		StepTime = 1000.0 / Level;
+		var lvl = lines / 10 + 1;
+		level = lvl > level ? lvl : level;
+		stepTime = 1000.0 / level;
 
-		Timer += 1000.0 / 60.0;
+		timer += 1000.0 / 60.0;
 
-		if (KeyUp)
+		if (keyUp)
 		{
-			//Horizonal
-			KeyTimerH ++ ;
-			if (Keys.IsDown(37))
+			// Horizonal
+			keyTimerH ++ ;
+			if (Keys.IsDown(keyMoveLeft))
 			{
-				if (KeyDir != -1)
+				if (keyDir != -1)
 				{
-					KeyDir = -1;
-					KeyTimerHS = 0;
+					keyDir = -1;
+					keyTimerHS = 0;
 					KeyTimer = 10;
 				}
 
-				if (KeyTimerHS < HorzStartDelay)
+				if (keyTimerHS < das)
 				{
-					if (KeyTimerHS == 0 && !CollisionDetect(PosX - 1, PosY, CurrentPiece))
-						PosX -- ;
+					if (keyTimerHS == 0 && !CollisionDetect(posX - 1, posY, curTetrimino))
+						posX -- ;
 					
-					KeyTimerHS ++ ;
+					keyTimerHS ++ ;
 				}
-				else if (KeyTimerH >= HorzDelay)
+				else if (keyTimerH >= arr)
 				{
-					KeyTimerH %= HorzDelay;
-					if (!CollisionDetect(PosX - 1, PosY, CurrentPiece))
-						PosX -- ;
+					keyTimerH %= arr;
+					if (!CollisionDetect(posX - 1, posY, curTetrimino))
+						posX -- ;
 				}
 			}
-			else if (Keys.IsDown(39))
+			else if (Keys.IsDown(keyMoveRight))
 			{
-				if (KeyDir != 1)
+				if (keyDir != 1)
 				{
-					KeyDir = 1;
+					keyDir = 1;
 					KeyTimer = 10;
 				}
 
-				if (KeyTimerHS < HorzStartDelay)
+				if (keyTimerHS < das)
 				{
-					if (KeyTimerHS == 0 && !CollisionDetect(PosX + 1, PosY, CurrentPiece))
-						PosX ++ ;
+					if (keyTimerHS == 0 && !CollisionDetect(posX + 1, posY, curTetrimino))
+						posX ++ ;
 					
-					KeyTimerHS ++ ;
+					keyTimerHS ++ ;
 				}
-				else if (KeyTimerH >= HorzDelay)
+				else if (keyTimerH >= arr)
 				{
-					KeyTimerH %= HorzDelay;
+					keyTimerH %= arr;
 
-					if (!CollisionDetect(PosX + 1, PosY, CurrentPiece))
-						PosX ++ ;
+					if (!CollisionDetect(posX + 1, posY, curTetrimino))
+						posX ++ ;
 				}
 			}
 			else
 			{
-				KeyTimerHS = 0;
-				KeyTimerH = HorzDelay;
-				KeyDir = 0;
+				keyTimerHS = 0;
+				keyTimerH = arr;
+				keyDir = 0;
 			}
 
-			//Rotation
-			if (Keys.IsDown(90))
+			// Rotation
+			if (Keys.IsDown(keyRotateLeft))
 			{
 				if (!Keys.IsPressed(3))
 					RotatePiece(0);
 
 				Keys.KeyPressed(3);
 			}
-			else if (Keys.IsDown(88))
+			else if (Keys.IsDown(keyRotateRight))
 			{
 				if (!Keys.IsPressed(3))
 					RotatePiece(1);
@@ -985,78 +1134,100 @@ function GameUpdate()
 			else
 				Keys.KeyReleased(3);
 
-			//Drop & Hold
+			// Drop & Hold
 			UpdatePreview();
-			if (Keys.IsDown(67))
+			if (Keys.IsDown(keyHold))
 			{
 				if (!Keys.IsPressed(1))
 				{
-					if (!HoldCount)
+					if (!holdCount)
 					{
-						HoldCount ++ ;
-						if (HoldPiece == -1)
+						holdCount ++ ;
+						if (holdTetrimino == -1)
 						{
-							HoldPiece = CurrentPiece >> 2;
+							holdTetrimino = curTetrimino >> 2;
 							FetchQueue();
 						}
 						else
 						{
-							var t = HoldPiece;
-							HoldPiece = CurrentPiece >> 2;
-							CurrentPiece = t << 2;
+							var t = holdTetrimino;
+							holdTetrimino = curTetrimino >> 2;
+							curTetrimino = t << 2;
 						}
 
-						ResetPiece();
+						ResetPosition();
 					}
 				}
 
 				Keys.KeyPressed(1);
 			}
-			else if (Keys.IsDown(32))
+			else if (Keys.IsDown(keyHardDrop))
 			{
 				if (!Keys.IsPressed(1))
-					PutPiece(PreviewX, PreviewY, CurrentPiece);
+					PutPiece(previewX, previewY, curTetrimino);
 
 				Keys.KeyPressed(1);
 			}
 			else
 				Keys.KeyReleased(1);
 
-			//Vertical
-			KeyTimerV ++ ;
-			if (Keys.IsDown(40))
+			// Vertical
+			keyTimerV ++ ;
+			if (Keys.IsDown(keySoftDrop))
 			{
-				if (KeyTimerV >= VertDelay)
+				if (keyTimerV >= softDropDelay)
 				{
-					KeyTimerV %= VertDelay;
+					keyTimerV %= softDropDelay;
 
-					if (!CollisionDetect(PosX, PosY + 1, CurrentPiece))
-						PosY ++ ;
+					if (!CollisionDetect(posX, posY + 1, curTetrimino))
+					{
+						tSpin = false;
+						posY ++ ;
+					}
 					else
 					{
-						//PutPiece(PosX, PosY, CurrentPiece);
-						Timer = 0;
+						//PutTetrimino(posX, posY, curTetrimino);
+						timer = 0;
 					}
 				}
 			}
 			else
-				KeyTimerV = VertDelay;
+				keyTimerV = softDropDelay;
 		}
 
-		if (Timer >= StepTime)
+		if (timer >= stepTime)
 		{
-			Timer %= StepTime;
-			if (!CollisionDetect(PosX, PosY + 1, CurrentPiece))
-				PosY ++ ;
+			timer %= stepTime;
+			if (!CollisionDetect(posX, posY + 1, curTetrimino))
+			{
+				tSpin = false;
+				posY ++ ;
+			}
 			else
 			{
-				//PutPiece(PosX, PosY, CurrentPiece);
-				Timer = 0;
+				//PutTetrimino(posX, posY, curTetrimino);
+				timer = 0;
+			}
+		}
+
+		if (CollisionDetect(posX, posY + 1, curTetrimino))
+		{
+			if (lockTmr < lockDelay)
+				lockTmr ++ ;
+			else
+				PutPiece(posX, posY, curTetrimino);
+		}
+		else
+		{
+			if (lockTmr && (rstCnt < maxLockDelayRstCnt))
+			{
+				rstCnt ++ ;
+				lockTmr = 0;
 			}
 		}
 	}
 
-	if (GameOver)
+	if (gameOver)
 	{
 		if (Keys.IsDown(32))
 		{
@@ -1070,47 +1241,49 @@ function GameUpdate()
 	}
 }
 
+// Main
+
 function GameMain()
 {
-	if (Keys.IsDown(72))
+	if (Keys.IsDown(keyInstruction))
 	{
 		if (!Keys.IsPressed(4))
-			ToggleInstructionScreen();
+			ToggleControlScreen();
 
 		Keys.KeyPressed(4);
 	}
 	else
 		Keys.KeyReleased(4);
 
-	switch(Mode)
+	switch(gameStat)
 	{
 		case 0:
 			if (Keys.IsDown(37))
 			{
-				if (Level > 1 && !Keys.IsPressed(0))
-					Level -- ;
+				if (level > 1 && !Keys.IsPressed(0))
+					level -- ;
 
 				Keys.KeyPressed(0);
 			}
 			else if (Keys.IsDown(39))
 			{
-				if (Level < 9 && !Keys.IsPressed(0))
-					Level ++ ;
+				if (level < 9 && !Keys.IsPressed(0))
+					level ++ ;
 
 				Keys.KeyPressed(0);
 			}
 			else if (Keys.IsDown(32))
 			{
-				if (!Keys.IsPressed(0) && KeyUp)
+				if (!Keys.IsPressed(0) && keyUp)
 				{
-					KeyUp = 0;
-					Mode = 1;
+					keyUp = 0;
+					gameStat = 1;
 				}
 
 			}
 			else
 			{
-				KeyUp = 1;
+				keyUp = 1;
 				Keys.KeyReleased(0);
 			}
 				
@@ -1123,12 +1296,14 @@ function GameMain()
 	DrawScreen();
 }
 
+// Load
+
 window.onload = function ()
 {
 	InitGame();
 
-	GameCanvas = document.getElementById("GameCanvas");
-	Interval = self.setInterval("GameMain()", 1000.0/60.0);
+	gameCanvas = document.getElementById("GameCanvas");
+	interval = self.setInterval("GameMain()", 1000.0/60.0);
 
 	window.addEventListener("keydown", function (Event)
 	{
@@ -1138,6 +1313,6 @@ window.onload = function ()
 	window.addEventListener("keyup", function (Event)
 	{
 		Keys.KeyUp(Event.keyCode);
-		KeyUp = 1;
+		keyUp = 1;
 	});
 }
