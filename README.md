@@ -1,7 +1,7 @@
 # javascript_tetris
 
-Glacc 2021
+Glacc 2023
 
-A tetris web game written in Javascript.
+A tetris game written in Javascript.
 
-Tested in Firefox 93.0.
+Tested in Firefox 113.0.1.
