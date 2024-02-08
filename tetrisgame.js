@@ -853,7 +853,7 @@ function LineClearDetect()
 			y -- ;
 	}
 
-	var lineClearStr = ["Single", "Double", "Triple", "Quad"];
+	var lineClearStr = ["", "Double", "Triple", "Quad"];
 	if (count > 0)
 	{
 		var ofs = 0;
